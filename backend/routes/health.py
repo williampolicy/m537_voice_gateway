@@ -16,9 +16,11 @@ _startup_time = time.time()
 
 
 @router.get("/health")
+@router.get("/api/health")
 async def health_check():
     """
     Health check endpoint (V5.3 required)
+    Available at both /health and /api/health
     """
     uptime_seconds = int(time.time() - _startup_time)
 
