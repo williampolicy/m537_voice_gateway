@@ -1,0 +1,123 @@
+"""
+M537 Voice Gateway - Voice Query Routes
+Main API endpoint for voice queries
+"""
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+import uuid
+import logging
+
+from services.intent_parser import IntentParser
+from services.query_executor import QueryExecutor
+from services.response_builder import ResponseBuilder
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# Initialize services
+intent_parser = IntentParser()
+query_executor = QueryExecutor()
+response_builder = ResponseBuilder()
+
+
+class VoiceQueryRequest(BaseModel):
+    """Voice query request model"""
+    transcript: str = Field(..., min_length=1, max_length=500)
+    session_id: Optional[str] = Field(None, max_length=100)
+    context: Optional[Dict[str, Any]] = None
+
+    @field_validator("transcript")
+    @classmethod
+    def sanitize_transcript(cls, v: str) -> str:
+        """Remove potentially dangerous characters"""
+        dangerous_chars = [";", "|", "&", "`", "$", "(", ")", "{", "}", "<", ">"]
+        for char in dangerous_chars:
+            v = v.replace(char, "")
+        return v.strip()
+
+
+class VoiceQueryResponse(BaseModel):
+    """Voice query response model"""
+    success: bool
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[Dict[str, Any]] = None
+    timestamp: str
+    request_id: str
+
+
+@router.post("/voice-query", response_model=VoiceQueryResponse)
+async def voice_query(request: VoiceQueryRequest):
+    """
+    Main voice query endpoint
+
+    Processes natural language queries and returns structured responses.
+    """
+    request_id = f"req_{uuid.uuid4().hex[:12]}"
+    timestamp = datetime.utcnow().isoformat() + "Z"
+
+    logger.info(f"[{request_id}] Processing query: {request.transcript[:50]}...")
+
+    try:
+        # Step 1: Parse intent
+        intent, confidence, params = intent_parser.parse(request.transcript)
+
+        if intent is None:
+            # Intent not recognized
+            suggestions = intent_parser.get_suggestions()
+            return VoiceQueryResponse(
+                success=False,
+                error={
+                    "code": "INTENT_NOT_RECOGNIZED",
+                    "message": "抱歉，我没有理解你的问题。",
+                    "suggestions": suggestions
+                },
+                timestamp=timestamp,
+                request_id=request_id
+            )
+
+        # Step 2: Execute query
+        result = query_executor.execute(intent, params)
+
+        if not result["success"]:
+            return VoiceQueryResponse(
+                success=False,
+                error={
+                    "code": "EXECUTION_FAILED",
+                    "message": f"查询执行失败：{result.get('error', '未知错误')}"
+                },
+                timestamp=timestamp,
+                request_id=request_id
+            )
+
+        # Step 3: Build response
+        answer_text = response_builder.build(intent, result["data"])
+
+        logger.info(f"[{request_id}] Query successful, intent: {intent}")
+
+        return VoiceQueryResponse(
+            success=True,
+            data={
+                "answer_text": answer_text,
+                "intent": intent,
+                "confidence": confidence,
+                "tool_used": intent,
+                "raw_data": result["data"],
+                "suggestions": intent_parser.get_related_suggestions(intent)
+            },
+            timestamp=timestamp,
+            request_id=request_id
+        )
+
+    except Exception as e:
+        logger.error(f"[{request_id}] Error processing query: {e}")
+        return VoiceQueryResponse(
+            success=False,
+            error={
+                "code": "INTERNAL_ERROR",
+                "message": "服务器内部错误，请稍后重试。"
+            },
+            timestamp=timestamp,
+            request_id=request_id
+        )

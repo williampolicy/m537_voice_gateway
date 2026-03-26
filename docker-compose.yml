@@ -1,0 +1,27 @@
+services:
+  m537_voice_gateway:
+    build: .
+    container_name: m537_voice_gateway
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PORT=5537
+      - HOST=0.0.0.0
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - PROJECTS_BASE_PATH=/data/projects
+    volumes:
+      - /data/projects:/data/projects:ro
+      - ./logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
