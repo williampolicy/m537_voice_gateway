@@ -14,6 +14,8 @@ from services.intent_parser import IntentParser
 from services.query_executor import QueryExecutor
 from services.response_builder import ResponseBuilder
 from services.llm_assistant import llm_assistant
+from services.session_manager import session_manager
+from services.audit_logger import audit_logger
 from routes.metrics import metrics_collector
 
 router = APIRouter()
@@ -64,9 +66,31 @@ async def voice_query(request: VoiceQueryRequest):
     start_time = time.time()
     llm_used = False
 
+    # Audit log the query
+    audit_logger.log_voice_query(
+        session_id=request.session_id or request_id,
+        request_id=request_id,
+        transcript=request.transcript
+    )
+
+    # Get session context for multi-turn support
+    session_id = request.session_id or request_id
+    session_context = session_manager.get_follow_up_context(session_id)
+
     try:
+        # Step 0: Resolve pronoun references (e.g., "它" -> "m537")
+        resolved_project = session_manager.resolve_pronoun_reference(session_id, request.transcript)
+        if resolved_project:
+            logger.info(f"[{request_id}] Resolved pronoun to project: {resolved_project}")
+
         # Step 1: Parse intent (rule-based)
         intent, confidence, params = intent_parser.parse(request.transcript)
+
+        # Apply resolved pronoun if no project_id in params
+        if resolved_project and "project_id" not in params:
+            if intent in ["project_summary"] or "项目" in request.transcript:
+                params["project_id"] = resolved_project
+                logger.info(f"[{request_id}] Applied resolved project: {resolved_project}")
 
         # Step 1b: Try LLM fallback if rule-based parsing failed
         if intent is None and llm_assistant.enabled:
@@ -123,6 +147,15 @@ async def voice_query(request: VoiceQueryRequest):
         duration = time.time() - start_time
         metrics_collector.record_request(True, duration, intent=intent, tool=intent)
         logger.info(f"[{request_id}] Query successful, intent: {intent}, duration: {duration*1000:.1f}ms")
+
+        # Record conversation turn for context
+        session_manager.record_turn(
+            session_id=session_id,
+            query=request.transcript,
+            intent=intent,
+            response=answer_text,
+            data=result.get("data", {})
+        )
 
         return VoiceQueryResponse(
             success=True,

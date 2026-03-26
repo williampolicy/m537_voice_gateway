@@ -28,6 +28,11 @@
             <span class="text" id="currentInput">等待录音...</span>
         </div>
 
+        <!-- Voice Visualizer -->
+        <div class="visualizer-container">
+            <canvas id="voiceVisualizer" class="voice-visualizer"></canvas>
+        </div>
+
         <!-- Record Button -->
         <div class="record-section">
             <button class="record-button" id="recordButton" aria-label="录音">
@@ -63,6 +68,7 @@
 
     <!-- Scripts -->
     <script src="js/config.js"></script>
+    <script src="js/voice-visualizer.js"></script>
     <script src="js/voice-input.js"></script>
     <script src="js/voice-output.js"></script>
     <script src="js/api-client.js"></script>

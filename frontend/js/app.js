@@ -29,6 +29,15 @@ class App {
             onEnd: () => this.handleSpeakingEnd()
         });
 
+        // Voice visualizer
+        this.visualizer = new VoiceVisualizer('voiceVisualizer', {
+            barCount: 40,
+            barColor: '#2563eb',
+            barColorActive: '#ef4444',
+            smoothing: 0.85
+        });
+        window.voiceVisualizer = this.visualizer;
+
         this.init();
     }
 
@@ -83,6 +92,9 @@ class App {
         this.recordStatus.classList.add('recording');
         this.currentInput.textContent = '正在聆听...';
         this.currentInput.classList.add('interim');
+
+        // Start visualizer
+        this.visualizer.start();
     }
 
     handleRecordingEnd() {
@@ -92,6 +104,9 @@ class App {
         this.recordButton.querySelector('.stop-icon').classList.add('hidden');
         this.recordStatus.textContent = '点击开始录音';
         this.recordStatus.classList.remove('recording');
+
+        // Stop visualizer
+        this.visualizer.stop();
     }
 
     handleInterimResult(text) {
@@ -155,6 +170,9 @@ class App {
         this.recordStatus.textContent = '处理中...';
         this.currentInput.textContent = '等待响应...';
 
+        // Show processing animation
+        this.visualizer.drawProcessingAnimation();
+
         try {
             const response = await this.api.voiceQuery(text, this.sessionId);
 
@@ -189,6 +207,9 @@ class App {
             this.recordButton.classList.remove('processing');
             this.recordStatus.textContent = '点击开始录音';
             this.currentInput.textContent = '等待录音...';
+
+            // Stop processing animation
+            this.visualizer.stopProcessingAnimation();
         }
     }
 

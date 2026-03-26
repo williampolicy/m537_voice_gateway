@@ -1,9 +1,10 @@
 /* M537 Voice Gateway Styles */
-/* Mobile-first, responsive design */
+/* Mobile-first, responsive design with dark mode support */
 
 :root {
     --primary-color: #2563eb;
     --primary-hover: #1d4ed8;
+    --primary-light: #3b82f6;
     --secondary-color: #64748b;
     --success-color: #10b981;
     --error-color: #ef4444;
@@ -15,6 +16,40 @@
     --border-color: #e2e8f0;
     --border-radius: 12px;
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --text-color: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --border-color: #334155;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .message.system {
+        background: #334155;
+    }
+
+    .message.error {
+        background: #450a0a;
+        border-color: #dc2626;
+    }
+
+    .quick-btn {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-color);
+    }
+
+    .quick-btn:hover {
+        background: var(--primary-color);
+        color: white;
+    }
 }
 
 * {
@@ -142,6 +177,22 @@ body {
     font-style: italic;
 }
 
+/* Voice Visualizer */
+.visualizer-container {
+    width: 100%;
+    height: 60px;
+    margin: 16px 0;
+    padding: 0 10px;
+}
+
+.voice-visualizer {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--border-radius);
+    background: var(--card-bg);
+    box-shadow: var(--shadow);
+}
+
 /* Record Button */
 .record-section {
     display: flex;
@@ -265,7 +316,19 @@ body {
     font-size: 0.625rem;
 }
 
-/* Responsive */
+/* Responsive - Tablet */
+@media (max-width: 768px) {
+    .container {
+        max-width: 100%;
+        padding: 16px;
+    }
+
+    .chat-container {
+        max-height: 350px;
+    }
+}
+
+/* Responsive - Mobile */
 @media (max-width: 480px) {
     .container {
         padding: 12px;
@@ -275,14 +338,33 @@ body {
         font-size: 1.25rem;
     }
 
+    .header .subtitle {
+        font-size: 0.75rem;
+    }
+
+    .chat-container {
+        max-height: 280px;
+        padding: 12px;
+    }
+
+    .visualizer-container {
+        height: 50px;
+        margin: 12px 0;
+    }
+
     .record-button {
-        width: 100px;
-        height: 100px;
+        width: 90px;
+        height: 90px;
     }
 
     .record-button svg {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
+    }
+
+    .message {
+        padding: 10px 14px;
+        font-size: 0.9rem;
     }
 
     .message.user {
@@ -293,8 +375,80 @@ body {
         margin-right: 10%;
     }
 
+    .input-display {
+        padding: 10px 14px;
+    }
+
     .quick-buttons {
         justify-content: center;
+    }
+
+    .quick-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    .footer {
+        padding: 16px 0;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 360px) {
+    .header h1 {
+        font-size: 1.1rem;
+    }
+
+    .record-button {
+        width: 80px;
+        height: 80px;
+    }
+
+    .quick-btn {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .header {
+        padding: 10px 0;
+    }
+
+    .chat-container {
+        max-height: 120px;
+    }
+
+    .visualizer-container {
+        height: 40px;
+    }
+
+    .record-button {
+        width: 60px;
+        height: 60px;
+    }
+
+    .record-button svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .footer {
+        padding: 10px 0;
+    }
+}
+
+/* Touch-friendly enhancements */
+@media (hover: none) and (pointer: coarse) {
+    .record-button {
+        width: 100px;
+        height: 100px;
+    }
+
+    .quick-btn {
+        padding: 10px 16px;
+        min-height: 44px;
     }
 }
 
@@ -340,4 +494,101 @@ body {
 @keyframes bounce {
     0%, 80%, 100% { transform: scale(0); }
     40% { transform: scale(1); }
+}
+
+/* Smooth transitions */
+.message,
+.record-button,
+.quick-btn,
+.input-display,
+.voice-visualizer {
+    transition: all 0.3s ease;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    margin-right: 20%;
+    background: #e2e8f0;
+    border-radius: var(--border-radius);
+    width: fit-content;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-8px); }
+}
+
+/* Success animation */
+@keyframes successPop {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.message.system.success {
+    animation: successPop 0.4s ease;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.status-badge.online {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+}
+
+.status-badge.online::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--success-color);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* Glassmorphism effect for cards */
+@supports (backdrop-filter: blur(10px)) {
+    .chat-container,
+    .input-display,
+    .voice-visualizer {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .chat-container,
+        .input-display,
+        .voice-visualizer {
+            background: rgba(30, 41, 59, 0.9);
+        }
+    }
 }
