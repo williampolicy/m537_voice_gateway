@@ -41,17 +41,24 @@ class QueryCache:
         "count_projects": 300,      # 5 minutes
         "missing_readme": 300,      # 5 minutes
         "project_summary": 600,     # 10 minutes
+        "cron_jobs": 300,           # 5 minutes
 
         # Semi-dynamic data - medium TTL
         "list_ports": 60,           # 1 minute
         "list_containers": 60,      # 1 minute
         "list_tmux": 60,            # 1 minute
         "recent_updates": 120,      # 2 minutes
+        "git_status": 60,           # 1 minute
+        "disk_usage": 60,           # 1 minute
 
         # Dynamic data - short TTL
         "system_status": 30,        # 30 seconds
         "recent_errors": 30,        # 30 seconds
         "p0_health": 30,            # 30 seconds
+        "uptime_info": 30,          # 30 seconds
+        "process_list": 30,         # 30 seconds
+        "network_info": 30,         # 30 seconds
+        "service_logs": 15,         # 15 seconds (very dynamic)
     }
 
     def __init__(self, max_size: int = 500):

@@ -1,0 +1,101 @@
+# M537 Voice Gateway - Prometheus Alert Rules
+groups:
+  - name: m537-availability
+    rules:
+      - alert: M537ServiceDown
+        expr: up{job="m537-voice-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "M537 Voice Gateway is down"
+          description: "M537 Voice Gateway has been unreachable for more than 1 minute."
+
+      - alert: M537HighErrorRate
+        expr: (m537_requests_failed / m537_requests_total) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on M537"
+          description: "M537 error rate is above 10% for the last 5 minutes."
+
+      - alert: M537CriticalErrorRate
+        expr: (m537_requests_failed / m537_requests_total) > 0.25
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical error rate on M537"
+          description: "M537 error rate is above 25% for the last 2 minutes."
+
+  - name: m537-performance
+    rules:
+      - alert: M537HighLatency
+        expr: m537_latency_avg_ms > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on M537"
+          description: "M537 average latency is above 1 second for the last 5 minutes."
+
+      - alert: M537P99LatencySpike
+        expr: histogram_quantile(0.99, rate(m537_request_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P99 latency spike on M537"
+          description: "M537 P99 latency is above 2 seconds for the last 3 minutes."
+
+  - name: m537-rate-limiting
+    rules:
+      - alert: M537HighRateLimitBlocks
+        expr: rate(m537_rate_limit_blocked[5m]) > 1
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "High rate limiting on M537"
+          description: "M537 is blocking more than 1 request per second due to rate limiting."
+
+      - alert: M537RateLimitAbuse
+        expr: rate(m537_rate_limit_blocked[1m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Possible abuse detected on M537"
+          description: "M537 is blocking more than 10 requests per second, possible abuse."
+
+  - name: m537-llm
+    rules:
+      - alert: M537LLMFallbackHigh
+        expr: rate(m537_llm_fallback_total[10m]) > 0.5
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "High LLM fallback rate on M537"
+          description: "M537 is using LLM fallback frequently. Consider adding more rule-based patterns."
+
+      - alert: M537LLMLowSuccessRate
+        expr: (m537_llm_fallback_success / m537_llm_fallback_total) < 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low LLM success rate on M537"
+          description: "M537 LLM fallback success rate is below 50% for the last 15 minutes."
+
+  - name: m537-cache
+    rules:
+      - alert: M537LowCacheHitRate
+        expr: (m537_cache_hits / (m537_cache_hits + m537_cache_misses)) < 0.3
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low cache hit rate on M537"
+          description: "M537 cache hit rate is below 30% for the last 15 minutes."

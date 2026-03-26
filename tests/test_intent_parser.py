@@ -38,11 +38,21 @@ class TestIntentParser:
             "系统状态怎么样",
             "CPU使用率",
             "内存占用多少",
-            "磁盘空间",
         ]
         for case in test_cases:
             intent, confidence, params = self.parser.parse(case)
             assert intent == "system_status", f"Failed for: {case}"
+
+    def test_disk_usage_intent(self):
+        """测试磁盘使用情况查询意图"""
+        test_cases = [
+            "磁盘空间",
+            "硬盘使用情况",
+            "存储空间够吗",
+        ]
+        for case in test_cases:
+            intent, confidence, params = self.parser.parse(case)
+            assert intent == "disk_usage", f"Failed for: {case}"
 
     def test_list_ports_intent(self):
         """测试端口查询意图"""
