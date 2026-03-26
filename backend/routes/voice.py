@@ -5,13 +5,16 @@ Main API endpoint for voice queries
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import logging
+import time
 
 from services.intent_parser import IntentParser
 from services.query_executor import QueryExecutor
 from services.response_builder import ResponseBuilder
+from services.llm_assistant import llm_assistant
+from routes.metrics import metrics_collector
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -55,22 +58,41 @@ async def voice_query(request: VoiceQueryRequest):
     Processes natural language queries and returns structured responses.
     """
     request_id = f"req_{uuid.uuid4().hex[:12]}"
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     logger.info(f"[{request_id}] Processing query: {request.transcript[:50]}...")
+    start_time = time.time()
+    llm_used = False
 
     try:
-        # Step 1: Parse intent
+        # Step 1: Parse intent (rule-based)
         intent, confidence, params = intent_parser.parse(request.transcript)
 
+        # Step 1b: Try LLM fallback if rule-based parsing failed
+        if intent is None and llm_assistant.enabled:
+            try:
+                intent, confidence, params = await llm_assistant.classify_intent(request.transcript)
+                llm_used = True
+                if intent:
+                    logger.info(f"[{request_id}] LLM classified intent: {intent} (confidence: {confidence})")
+                    metrics_collector.record_llm_fallback(True)
+                else:
+                    metrics_collector.record_llm_fallback(False)
+            except Exception as e:
+                logger.warning(f"[{request_id}] LLM fallback failed: {e}")
+                metrics_collector.record_llm_fallback(False)
+
         if intent is None:
-            # Intent not recognized
-            suggestions = intent_parser.get_suggestions()
+            # Intent not recognized - provide context-aware suggestions
+            duration = time.time() - start_time
+            metrics_collector.record_request(False, duration, intent=None, tool=None)
+
+            suggestions = intent_parser.get_suggestions(request.transcript)
             return VoiceQueryResponse(
                 success=False,
                 error={
                     "code": "INTENT_NOT_RECOGNIZED",
-                    "message": "抱歉，我没有理解你的问题。",
+                    "message": "抱歉，我没有理解你的问题。请尝试以下查询方式：",
                     "suggestions": suggestions
                 },
                 timestamp=timestamp,
@@ -81,6 +103,10 @@ async def voice_query(request: VoiceQueryRequest):
         result = query_executor.execute(intent, params)
 
         if not result["success"]:
+            duration = time.time() - start_time
+            metrics_collector.record_request(False, duration, intent=intent, tool=intent)
+            metrics_collector.record_tool_error(intent)
+
             return VoiceQueryResponse(
                 success=False,
                 error={
@@ -94,7 +120,9 @@ async def voice_query(request: VoiceQueryRequest):
         # Step 3: Build response
         answer_text = response_builder.build(intent, result["data"])
 
-        logger.info(f"[{request_id}] Query successful, intent: {intent}")
+        duration = time.time() - start_time
+        metrics_collector.record_request(True, duration, intent=intent, tool=intent)
+        logger.info(f"[{request_id}] Query successful, intent: {intent}, duration: {duration*1000:.1f}ms")
 
         return VoiceQueryResponse(
             success=True,
@@ -111,6 +139,8 @@ async def voice_query(request: VoiceQueryRequest):
         )
 
     except Exception as e:
+        duration = time.time() - start_time
+        metrics_collector.record_request(False, duration, intent=None, tool=None)
         logger.error(f"[{request_id}] Error processing query: {e}")
         return VoiceQueryResponse(
             success=False,

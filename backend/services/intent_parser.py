@@ -45,7 +45,7 @@ class IntentParser:
         if intent:
             return intent, 0.85, params
 
-        # Not recognized
+        # Not recognized (LLM fallback handled in async route)
         return None, 0.0, {}
 
     def _extract_params(self, transcript: str, param_types: List[str]) -> Dict[str, Any]:
@@ -132,15 +132,49 @@ class IntentParser:
 
         return None, {}
 
-    def get_suggestions(self) -> List[str]:
-        """Get available query suggestions"""
-        return [
+    def get_suggestions(self, transcript: str = "") -> List[str]:
+        """Get available query suggestions, optionally context-aware"""
+        base_suggestions = [
             "现在有多少个项目？",
             "系统状态怎么样？",
             "当前有哪些端口在监听？",
             "最近有什么错误？",
             "m536 是什么项目？"
         ]
+
+        if not transcript:
+            return base_suggestions
+
+        # Context-aware suggestions based on what user might have meant
+        transcript_lower = transcript.lower()
+
+        # If user mentioned project-related terms
+        if any(term in transcript_lower for term in ["项目", "project", "m5", "m8"]):
+            return [
+                "现在有多少个项目？",
+                "最近更新了哪些项目？",
+                "哪些项目没有 README？",
+                "m537 是什么项目？"
+            ]
+
+        # If user mentioned system/server terms
+        if any(term in transcript_lower for term in ["服务", "系统", "服务器", "运行"]):
+            return [
+                "系统状态怎么样？",
+                "哪些 Docker 容器在运行？",
+                "P0 服务状态如何？",
+                "当前有哪些端口在监听？"
+            ]
+
+        # If user mentioned error/problem terms
+        if any(term in transcript_lower for term in ["错误", "问题", "故障", "失败"]):
+            return [
+                "最近有什么错误？",
+                "P0 服务状态如何？",
+                "系统状态怎么样？"
+            ]
+
+        return base_suggestions
 
     def get_related_suggestions(self, intent: str) -> List[str]:
         """Get related suggestions based on current intent"""

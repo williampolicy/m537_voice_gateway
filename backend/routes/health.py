@@ -3,7 +3,7 @@ M537 Voice Gateway - Health Check Routes
 V5.3 compliant health check endpoints
 """
 from fastapi import APIRouter
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import time
 
@@ -29,7 +29,7 @@ async def health_check():
         "status": "healthy",
         "version": settings.VERSION,
         "project": f"{settings.PROJECT_ID}_{settings.PROJECT_NAME}",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "ecosystem": f"LIGHT HOPE {settings.ECOSYSTEM_VERSION}",
         "uptime_seconds": uptime_seconds,
         "checks": {

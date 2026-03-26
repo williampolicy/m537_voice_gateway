@@ -12,7 +12,8 @@ import time
 import os
 
 from settings import settings
-from routes import voice, health, metrics
+from routes import voice, health, metrics, monitoring
+from middleware import RateLimitMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -52,6 +53,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
 
 # Request timing middleware
 @app.middleware("http")
@@ -67,6 +71,7 @@ async def add_process_time_header(request: Request, call_next):
 app.include_router(voice.router, prefix="/api", tags=["voice"])
 app.include_router(health.router, tags=["health"])
 app.include_router(metrics.router, prefix="/api", tags=["metrics"])
+app.include_router(monitoring.router, prefix="/api", tags=["monitoring"])
 
 
 # Serve frontend

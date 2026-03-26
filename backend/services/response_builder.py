@@ -52,6 +52,12 @@ class ResponseBuilder:
         },
         "not_recognized": {
             "default": "抱歉，我没有理解你的问题。你可以尝试问：{suggestions}"
+        },
+        "error": {
+            "execution_failed": "执行查询时遇到问题：{error}。请稍后重试。",
+            "timeout": "查询超时，服务器繁忙。请稍后重试。",
+            "permission": "没有权限执行此操作。",
+            "not_found": "没有找到相关信息。"
         }
     }
 
@@ -145,3 +151,9 @@ class ResponseBuilder:
         """Build response for unrecognized intent"""
         template = self.TEMPLATES["not_recognized"]["default"]
         return template.format(suggestions="、".join(suggestions[:3]))
+
+    def build_error(self, error_type: str, error_message: str = "") -> str:
+        """Build error response"""
+        templates = self.TEMPLATES.get("error", {})
+        template = templates.get(error_type, templates.get("execution_failed", "发生错误：{error}"))
+        return template.format(error=error_message)

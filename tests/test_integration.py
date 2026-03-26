@@ -106,10 +106,10 @@ class TestEndToEnd:
             "list_containers",
             "system_status",
             "recent_errors",
-            "get_project_summary",
-            "scan_missing_readme",
+            "project_summary",
+            "missing_readme",
             "recent_updates",
-            "p0_health_check",
+            "p0_health",
             "list_tmux",
         ]
 

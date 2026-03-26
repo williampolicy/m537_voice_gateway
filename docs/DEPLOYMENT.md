@@ -219,6 +219,43 @@ docker compose restart
 curl http://localhost:5537/api/metrics
 ```
 
+### Uptime Kuma 监控
+
+M537 Voice Gateway 支持 Uptime Kuma 监控。
+
+#### HTTP 监控 (推荐)
+
+在 Uptime Kuma 中添加 HTTP(s) 监控：
+
+| 设置 | 值 |
+|------|---|
+| 监控类型 | HTTP(s) |
+| URL | `https://voice.x1000.ai/api/uptime` |
+| 监控间隔 | 60 秒 |
+| 重试次数 | 3 |
+| 关键字 | `OK` |
+
+#### Push 监控 (可选)
+
+1. 在 Uptime Kuma 创建 Push 监控，获取 Push URL
+2. 设置环境变量：
+
+```bash
+export UPTIME_KUMA_PUSH_URL="https://your-kuma.com/api/push/xxxxx"
+```
+
+3. 服务会自动每 60 秒推送心跳
+
+#### 简单监控端点
+
+```bash
+# JSON 响应
+curl https://voice.x1000.ai/api/uptime
+
+# 纯文本响应 (最小开销)
+curl https://voice.x1000.ai/api/uptime/simple
+```
+
 ### 日志位置
 
 - 容器日志: `docker compose logs`

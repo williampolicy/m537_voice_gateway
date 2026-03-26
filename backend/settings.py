@@ -1,7 +1,7 @@
 """
 M537 Voice Gateway Configuration
 """
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import os
 
@@ -28,10 +28,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "voice_gateway"
     VERSION: str = "1.0.0"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 
 settings = Settings()
