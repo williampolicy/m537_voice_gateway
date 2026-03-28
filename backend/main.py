@@ -14,7 +14,11 @@ import os
 
 from settings import settings
 from routes import voice, health, metrics, monitoring, websocket
-from middleware import RateLimitMiddleware
+from middleware import (
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    InputSanitizationMiddleware
+)
 
 # Configure logging
 logging.basicConfig(
@@ -45,6 +49,9 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# Security headers middleware (outermost - runs last)
+app.add_middleware(SecurityHeadersMiddleware)
+
 # GZip compression for responses > 500 bytes
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
@@ -57,7 +64,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rate limiting middleware
+# Input sanitization middleware
+app.add_middleware(InputSanitizationMiddleware)
+
+# Rate limiting middleware (innermost - runs first)
 app.add_middleware(RateLimitMiddleware)
 
 
