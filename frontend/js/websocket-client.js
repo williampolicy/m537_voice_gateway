@@ -85,9 +85,41 @@ class WebSocketClient {
 
     scheduleReconnect() {
         this.reconnectAttempts++;
-        const delay = Math.min(this.options.reconnectInterval * this.reconnectAttempts, 30000);
-        console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+        // Exponential backoff with jitter
+        const baseDelay = this.options.reconnectInterval;
+        const exponentialDelay = baseDelay * Math.pow(2, this.reconnectAttempts - 1);
+        const jitter = Math.random() * 1000;
+        const delay = Math.min(exponentialDelay + jitter, 30000);
+
+        console.log(`[WebSocket] Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts}/${this.options.maxReconnectAttempts})`);
+
+        // Update connection status UI
+        this.updateConnectionStatus('reconnecting', this.reconnectAttempts);
+
         setTimeout(() => this.connect(), delay);
+    }
+
+    updateConnectionStatus(status, attempt = 0) {
+        const statusEl = document.getElementById('connectionStatus');
+        if (statusEl) {
+            statusEl.className = `connection-status ${status}`;
+            if (status === 'reconnecting') {
+                statusEl.title = `Reconnecting (attempt ${attempt})...`;
+            }
+        }
+
+        // Dispatch custom event for other components
+        window.dispatchEvent(new CustomEvent('websocket-status', {
+            detail: { status, attempt }
+        }));
+    }
+
+    getState() {
+        return {
+            isConnected: this.isConnected,
+            reconnectAttempts: this.reconnectAttempts,
+            readyState: this.ws ? this.ws.readyState : null
+        };
     }
 
     startPing() {
