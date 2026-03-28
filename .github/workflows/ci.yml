@@ -181,3 +181,171 @@ jobs:
       - name: Audit dependencies
         run: |
           pip-audit -r backend/requirements.txt --desc || true
+
+  # Performance Benchmarks
+  performance:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+
+      - name: Run performance benchmarks
+        working-directory: backend
+        run: |
+          python -c "
+          import time
+          import sys
+          sys.path.insert(0, '.')
+          from services.intent_parser import IntentParser
+          parser = IntentParser()
+
+          # Benchmark intent parsing
+          iterations = 1000
+          start = time.time()
+          for _ in range(iterations):
+              parser.parse('测试查询')
+          elapsed = time.time() - start
+
+          avg_ms = (elapsed / iterations) * 1000
+          print(f'Intent parsing benchmark:')
+          print(f'  Iterations: {iterations}')
+          print(f'  Total time: {elapsed*1000:.2f}ms')
+          print(f'  Average: {avg_ms:.3f}ms per query')
+
+          # Performance threshold: 5ms per query
+          if avg_ms > 5:
+              print('WARNING: Performance may be degraded')
+          else:
+              print('PASS: Performance within acceptable limits')
+          "
+
+      - name: Save benchmark results
+        run: |
+          echo "benchmark_date=$(date -Iseconds)" >> $GITHUB_OUTPUT
+          echo "commit_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  # Mobile/PWA Validation
+  pwa-validation:
+    name: PWA Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest.json
+        run: |
+          python3 -c "
+          import json
+          with open('frontend/manifest.json') as f:
+              manifest = json.load(f)
+
+          required = ['name', 'short_name', 'icons', 'start_url', 'display']
+          missing = [k for k in required if k not in manifest]
+          if missing:
+              print(f'ERROR: Missing required fields: {missing}')
+              exit(1)
+
+          # Check icon sizes
+          sizes = [icon['sizes'] for icon in manifest['icons']]
+          if '192x192' not in sizes or '512x512' not in sizes:
+              print('ERROR: Missing required icon sizes (192x192, 512x512)')
+              exit(1)
+
+          print('PASS: PWA manifest is valid')
+          "
+
+      - name: Validate service worker
+        run: |
+          if [ ! -f frontend/sw.js ]; then
+            echo "ERROR: Service worker not found"
+            exit 1
+          fi
+          echo "PASS: Service worker exists"
+
+  # Create Release
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [test, docker, security, performance]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from settings
+        id: version
+        run: |
+          VERSION=$(grep -oP 'VERSION\s*=\s*"\K[^"]+' backend/settings.py || echo "1.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if release exists
+        id: check_release
+        run: |
+          if gh release view "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Generate changelog
+        id: changelog
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            CHANGES=$(git log $PREV_TAG..HEAD --pretty=format:"- %s" --no-merges | head -20)
+          else
+            CHANGES=$(git log --pretty=format:"- %s" --no-merges -10)
+          fi
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.check_release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: M537 Voice Gateway v${{ steps.version.outputs.version }}
+          body: |
+            ## M537 Voice Gateway v${{ steps.version.outputs.version }}
+
+            ### What's Changed
+            ${{ steps.changelog.outputs.changes }}
+
+            ### Installation
+
+            **Docker:**
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:latest
+            docker run -p 5537:5537 ghcr.io/${{ github.repository }}:latest
+            ```
+
+            **From source:**
+            ```bash
+            git clone https://github.com/${{ github.repository }}.git
+            cd m537_voice_gateway
+            pip install -r backend/requirements.txt
+            python backend/main.py
+            ```
+
+            ### Full Changelog
+            https://github.com/${{ github.repository }}/compare/v${{ steps.version.outputs.version }}...HEAD
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
