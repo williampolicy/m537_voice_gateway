@@ -1,13 +1,14 @@
 """
 M537 Voice Gateway - Query Cache
-In-memory caching for frequently accessed query results
+In-memory caching with LRU eviction and memory monitoring
 """
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, Callable
 from datetime import datetime, timezone, timedelta
 from collections import OrderedDict
 import threading
 import hashlib
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -144,13 +145,40 @@ class QueryCache:
             total = self.hits + self.misses
             hit_rate = (self.hits / total * 100) if total > 0 else 0
 
+            # Calculate memory usage
+            memory_bytes = sum(
+                sys.getsizeof(k) + sys.getsizeof(v.data)
+                for k, v in self.cache.items()
+            )
+
             return {
                 "size": len(self.cache),
                 "max_size": self.max_size,
                 "hits": self.hits,
                 "misses": self.misses,
-                "hit_rate": f"{hit_rate:.1f}%"
+                "hit_rate": f"{hit_rate:.1f}%",
+                "memory_bytes": memory_bytes,
+                "memory_kb": round(memory_bytes / 1024, 2)
             }
+
+    def get_hot_entries(self, limit: int = 10) -> list:
+        """Get most frequently accessed cache entries"""
+        with self._lock:
+            entries = [
+                {"key": k[:8], "hits": v.hits, "age_seconds": (datetime.now(timezone.utc) - v.created_at).seconds}
+                for k, v in self.cache.items()
+            ]
+            return sorted(entries, key=lambda x: x["hits"], reverse=True)[:limit]
+
+    def warm(self, entries: list):
+        """Pre-warm cache with frequently accessed data"""
+        for entry in entries:
+            intent = entry.get("intent")
+            params = entry.get("params", {})
+            data = entry.get("data")
+            if intent and data:
+                self.set(intent, params, data)
+        logger.info(f"Cache warmed with {len(entries)} entries")
 
     def cleanup_expired(self):
         """Remove all expired entries"""

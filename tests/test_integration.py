@@ -13,6 +13,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 class TestEndToEnd:
     """端到端集成测试"""
 
+    @pytest.fixture(autouse=True)
+    def clear_cache(self):
+        """Clear cache before each test to ensure isolation"""
+        from services.cache import query_cache
+        query_cache.invalidate()
+        yield
+
     def test_full_query_flow_count_projects(self):
         """完整查询流程测试 - 项目数量"""
         # 1. 模拟语音输入
