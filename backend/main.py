@@ -14,6 +14,7 @@ import os
 
 from settings import settings
 from routes import voice, health, metrics, monitoring, websocket
+from routes.v1 import router as v1_router
 from middleware import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -35,8 +36,16 @@ async def lifespan(app: FastAPI):
     logger.info(f"M537 Voice Gateway starting on port {settings.PORT}")
     logger.info(f"Ecosystem version: LIGHT HOPE {settings.ECOSYSTEM_VERSION}")
     logger.info(f"Projects base path: {settings.PROJECTS_BASE_PATH}")
+
+    # Start background scheduler
+    from services.scheduler import scheduler
+    await scheduler.start()
+    logger.info("Background scheduler started")
+
     yield
+
     # Shutdown
+    await scheduler.stop()
     logger.info("M537 Voice Gateway shutting down")
 
 
@@ -87,6 +96,9 @@ app.include_router(health.router, tags=["health"])
 app.include_router(metrics.router, prefix="/api", tags=["metrics"])
 app.include_router(monitoring.router, prefix="/api", tags=["monitoring"])
 app.include_router(websocket.router, tags=["websocket"])
+
+# API v1 routes (versioned API)
+app.include_router(v1_router, prefix="/api", tags=["api-v1"])
 
 
 # Serve frontend
