@@ -28,6 +28,17 @@
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
 </head>
 <body>
+    <!-- Skip link for keyboard accessibility -->
+    <a href="#chatContainer" class="skip-link">跳至主要内容</a>
+
+    <!-- Connection status indicator -->
+    <div class="connection-status" id="connectionStatus" role="status" aria-live="polite"></div>
+
+    <!-- Offline banner -->
+    <div class="offline-banner" id="offlineBanner" role="alert">
+        <span>网络已断开 - 部分功能可能不可用</span>
+    </div>
+
     <div class="container">
         <!-- Header -->
         <header class="header">
@@ -87,6 +98,9 @@
         </footer>
     </div>
 
+    <!-- Toast notifications container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
     <!-- Scripts -->
     <script src="js/config.js"></script>
     <script src="js/voice-visualizer.js"></script>
@@ -96,6 +110,7 @@
     <script src="js/websocket-client.js"></script>
     <script src="js/keyboard-shortcuts.js"></script>
     <script src="js/charts.js"></script>
+    <script src="js/toast.js"></script>
     <script src="js/app.js"></script>
 
     <!-- Service Worker Registration -->
@@ -127,15 +142,29 @@
         }
 
         // Handle offline/online events
+        const offlineBanner = document.getElementById('offlineBanner');
+        const connectionStatus = document.getElementById('connectionStatus');
+
         window.addEventListener('online', () => {
             document.body.classList.remove('offline');
+            offlineBanner.classList.remove('visible');
+            connectionStatus.className = 'connection-status connected';
+            setTimeout(() => connectionStatus.className = 'connection-status', 2000);
             console.log('[App] Back online');
         });
 
         window.addEventListener('offline', () => {
             document.body.classList.add('offline');
+            offlineBanner.classList.add('visible');
+            connectionStatus.className = 'connection-status disconnected';
             console.log('[App] Gone offline');
         });
+
+        // Initial connection check
+        if (!navigator.onLine) {
+            offlineBanner.classList.add('visible');
+            connectionStatus.className = 'connection-status disconnected';
+        }
     </script>
 </body>
 </html>
