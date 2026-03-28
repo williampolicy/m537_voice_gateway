@@ -12,7 +12,7 @@ import time
 import os
 
 from settings import settings
-from routes import voice, health, metrics, monitoring
+from routes import voice, health, metrics, monitoring, websocket
 from middleware import RateLimitMiddleware
 
 # Configure logging
@@ -72,6 +72,7 @@ app.include_router(voice.router, prefix="/api", tags=["voice"])
 app.include_router(health.router, tags=["health"])
 app.include_router(metrics.router, prefix="/api", tags=["metrics"])
 app.include_router(monitoring.router, prefix="/api", tags=["monitoring"])
+app.include_router(websocket.router, tags=["websocket"])
 
 
 # Serve frontend
