@@ -5,6 +5,7 @@ LIGHT HOPE Voice Gateway for server ecosystem access
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import logging
@@ -43,6 +44,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# GZip compression for responses > 500 bytes
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # CORS middleware
 app.add_middleware(
