@@ -2,9 +2,30 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>M537 语音生态入口 | LIGHT HOPE</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="LIGHT HOPE Voice Gateway - Natural language server access">
+    <meta name="theme-color" content="#4a90d9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="M537 Voice">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/icon-16x16.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
+
+    <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
 </head>
 <body>
     <div class="container">
@@ -74,6 +95,47 @@
     <script src="js/api-client.js"></script>
     <script src="js/websocket-client.js"></script>
     <script src="js/keyboard-shortcuts.js"></script>
+    <script src="js/charts.js"></script>
     <script src="js/app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('[App] Service Worker registered:', registration.scope);
+
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    if (confirm('新版本可用，是否刷新？')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('[App] Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // Handle offline/online events
+        window.addEventListener('online', () => {
+            document.body.classList.remove('offline');
+            console.log('[App] Back online');
+        });
+
+        window.addEventListener('offline', () => {
+            document.body.classList.add('offline');
+            console.log('[App] Gone offline');
+        });
+    </script>
 </body>
 </html>

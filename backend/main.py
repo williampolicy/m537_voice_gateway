@@ -95,9 +95,29 @@ if os.path.exists(frontend_path):
     app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
     app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
 
+    # PWA assets
+    assets_path = os.path.join(frontend_path, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
     @app.get("/")
     async def serve_index():
         return FileResponse(os.path.join(frontend_path, "index.html"))
+
+    @app.get("/manifest.json")
+    async def serve_manifest():
+        return FileResponse(
+            os.path.join(frontend_path, "manifest.json"),
+            media_type="application/manifest+json"
+        )
+
+    @app.get("/sw.js")
+    async def serve_service_worker():
+        return FileResponse(
+            os.path.join(frontend_path, "sw.js"),
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/"}
+        )
 
 
 if __name__ == "__main__":

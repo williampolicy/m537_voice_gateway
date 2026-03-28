@@ -1,0 +1,162 @@
+# M537 Voice Gateway - Helm Values
+# Default configuration values
+
+# Replica count
+replicaCount: 2
+
+# Image configuration
+image:
+  repository: lighthope/m537-voice-gateway
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to Chart appVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Service account
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+# Pod annotations and labels
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/api/metrics"
+  prometheus.io/port: "5537"
+
+podLabels: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 5537
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: voice.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    # - secretName: voice-tls
+    #   hosts:
+    #     - voice.example.com
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Liveness probe
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Environment variables
+env:
+  - name: LOG_LEVEL
+    value: "INFO"
+  - name: DEBUG
+    value: "false"
+
+# Environment variables from secrets/configmaps
+envFrom: []
+
+# Extra volumes
+volumes: []
+
+# Extra volume mounts
+volumeMounts: []
+
+# Init containers
+initContainers: []
+
+# Sidecar containers
+sidecarContainers: []
+
+# ConfigMap data
+config:
+  # Projects base path (for volume mount)
+  projectsBasePath: "/data/projects"
+
+# ServiceMonitor for Prometheus Operator
+serviceMonitor:
+  enabled: false
+  namespace: ""
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+  metricRelabelings: []
+  relabelings: []
+
+# Network policy
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
