@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     ECOSYSTEM_VERSION: str = "V5.3"
     PROJECT_ID: str = "m537"
     PROJECT_NAME: str = "voice_gateway"
-    VERSION: str = "1.0.0"
+    VERSION: str = "1.1.0"
 
     model_config = SettingsConfigDict(
         env_file=".env",

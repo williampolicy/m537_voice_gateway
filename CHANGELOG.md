@@ -7,11 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2024-03-29
+
 ### Added
-- API Key authentication system with tiered rate limiting
-- Circuit breaker pattern for resilient external service calls
-- Graceful shutdown with connection draining
-- Webhook event notification support
+
+#### Enterprise Features
+- **API Key Authentication**: Multi-tier rate limiting (free/standard/premium/enterprise)
+- **Circuit Breaker**: Automatic fault isolation with configurable thresholds
+- **Graceful Shutdown**: Connection draining with cleanup callbacks
+- **Usage Analytics**: Query statistics, performance percentiles, trend analysis
+- **Webhook Events**: HMAC-signed notifications for system events
+
+#### Observability
+- **OpenTelemetry Integration**: Full distributed tracing support
+- **Error Tracking**: Sentry integration with error fingerprinting
+- **Structured Logging**: Log rotation (main 10MBx5, error 5MBx3, access daily)
+
+#### SDK Enhancements
+- **Python SDK**: API Key support, retries with backoff, analytics/webhooks API
+- **TypeScript SDK**: Full type definitions, async support, webhook verification
+
+#### Kubernetes
+- **Helm Chart v1.1.0**: OpenTelemetry, Sentry, API Key secrets support
+
+#### Documentation
+- Milestone reports in `_docs/milestones/`
+- Enterprise API SOP in `_docs/sop/`
+- Architecture design in `_docs/architecture/`
+- Audit reports in `_docs/audit/`
+- Lessons learned in `_docs/lessons-learned/`
+
+### Changed
+- Main application now integrates all enterprise features
+- Enhanced middleware stack with tracing and shutdown support
+
+### Testing
+- 282 tests (100% pass rate)
+- Security, performance, enterprise feature coverage
 
 ## [1.0.0] - 2024-03-28
 
@@ -93,6 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.1.0 | 2024-03-29 | Enterprise features, SDKs, observability |
 | 1.0.0 | 2024-03-28 | Production release with full feature set |
 | 0.9.0 | 2024-03-27 | Beta release |
 
