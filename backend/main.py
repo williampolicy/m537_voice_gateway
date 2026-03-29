@@ -1,6 +1,13 @@
 """
 M537 Voice Gateway - Main Application Entry
 LIGHT HOPE Voice Gateway for server ecosystem access
+
+Enterprise-grade features:
+- OpenTelemetry distributed tracing
+- Structured logging with rotation
+- Graceful shutdown with connection draining
+- Usage analytics and webhooks
+- API Key authentication
 """
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -11,42 +18,69 @@ from contextlib import asynccontextmanager
 import logging
 import time
 import os
+import signal
+import asyncio
 
 from settings import settings
 from routes import voice, health, metrics, monitoring, websocket
 from routes.v1 import router as v1_router
+from routes.analytics import router as analytics_router
+from routes.webhooks import router as webhooks_router
 from middleware import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
     InputSanitizationMiddleware
 )
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Enterprise features
+from logging_config import setup_logging
+from tracing import TracingMiddleware, init_tracing
+from graceful_shutdown import shutdown_manager
+from error_tracking import error_tracker
+
+# Configure structured logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan management"""
+    """Application lifespan management with enterprise features"""
     # Startup
     logger.info(f"M537 Voice Gateway starting on port {settings.PORT}")
     logger.info(f"Ecosystem version: LIGHT HOPE {settings.ECOSYSTEM_VERSION}")
     logger.info(f"Projects base path: {settings.PROJECTS_BASE_PATH}")
+
+    # Initialize OpenTelemetry tracing
+    init_tracing(
+        service_name="m537-voice-gateway",
+        service_version=settings.VERSION
+    )
+    logger.info("OpenTelemetry tracing initialized")
 
     # Start background scheduler
     from services.scheduler import scheduler
     await scheduler.start()
     logger.info("Background scheduler started")
 
+    # Register graceful shutdown handlers
+    def handle_shutdown(signum, frame):
+        logger.info(f"Received signal {signum}, initiating graceful shutdown")
+        asyncio.create_task(shutdown_manager.initiate_shutdown())
+
+    signal.signal(signal.SIGTERM, handle_shutdown)
+    signal.signal(signal.SIGINT, handle_shutdown)
+    logger.info("Graceful shutdown handlers registered")
+
     yield
 
-    # Shutdown
+    # Graceful shutdown sequence
+    logger.info("Initiating graceful shutdown...")
+    await shutdown_manager.initiate_shutdown()
+
+    # Stop scheduler
     await scheduler.stop()
-    logger.info("M537 Voice Gateway shutting down")
+    logger.info("M537 Voice Gateway shutdown complete")
 
 
 app = FastAPI(
@@ -76,6 +110,9 @@ app.add_middleware(
 # Input sanitization middleware
 app.add_middleware(InputSanitizationMiddleware)
 
+# OpenTelemetry tracing middleware
+app.add_middleware(TracingMiddleware)
+
 # Rate limiting middleware (innermost - runs first)
 app.add_middleware(RateLimitMiddleware)
 
@@ -90,6 +127,31 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
+# Graceful shutdown middleware
+@app.middleware("http")
+async def graceful_shutdown_middleware(request: Request, call_next):
+    """Track requests for graceful shutdown"""
+    # Health checks bypass shutdown check
+    if request.url.path.startswith("/health"):
+        return await call_next(request)
+
+    # Check if shutting down
+    if shutdown_manager.is_shutting_down:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Service is shutting down",
+                "retry_after": 30
+            },
+            headers={"Retry-After": "30"}
+        )
+
+    # Track request for connection draining
+    async with shutdown_manager.track_request():
+        return await call_next(request)
+
+
 # Register API routes
 app.include_router(voice.router, prefix="/api", tags=["voice"])
 app.include_router(health.router, tags=["health"])
@@ -99,6 +161,10 @@ app.include_router(websocket.router, tags=["websocket"])
 
 # API v1 routes (versioned API)
 app.include_router(v1_router, prefix="/api", tags=["api-v1"])
+
+# Enterprise feature routes
+app.include_router(analytics_router, prefix="/api", tags=["analytics"])
+app.include_router(webhooks_router, prefix="/api", tags=["webhooks"])
 
 
 # Serve frontend

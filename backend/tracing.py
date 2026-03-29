@@ -53,6 +53,28 @@ class NoOpTracer:
 _tracer = None
 
 
+def init_tracing(service_name: str = None, service_version: str = None):
+    """
+    Initialize tracing with custom service name and version.
+
+    Args:
+        service_name: Override default service name
+        service_version: Override default service version
+    """
+    global SERVICE_NAME
+    if service_name:
+        SERVICE_NAME = service_name
+
+    # Force re-initialization of tracer
+    global _tracer
+    _tracer = None
+
+    # Get tracer to initialize
+    tracer = get_tracer()
+    logger.info(f"Tracing initialized for {SERVICE_NAME}")
+    return tracer
+
+
 def get_tracer():
     """Get the tracer instance, initializing if needed"""
     global _tracer
