@@ -116,6 +116,14 @@ class QueryCache:
             self.cache[key] = CacheEntry(data, ttl)
             logger.debug(f"Cached {intent} with TTL {ttl}s")
 
+    def clear(self):
+        """Clear all cache entries"""
+        self.invalidate()
+        # Reset stats
+        with self._lock:
+            self.hits = 0
+            self.misses = 0
+
     def invalidate(self, intent: str = None, params: Dict[str, Any] = None):
         """Invalidate cache entries"""
         with self._lock:

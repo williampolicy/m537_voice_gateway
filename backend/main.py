@@ -26,6 +26,7 @@ from routes import voice, health, metrics, monitoring, websocket
 from routes.v1 import router as v1_router
 from routes.analytics import router as analytics_router
 from routes.webhooks import router as webhooks_router
+from routes.admin import router as admin_router
 from middleware import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -165,6 +166,7 @@ app.include_router(v1_router, prefix="/api", tags=["api-v1"])
 # Enterprise feature routes
 app.include_router(analytics_router, prefix="/api", tags=["analytics"])
 app.include_router(webhooks_router, prefix="/api", tags=["webhooks"])
+app.include_router(admin_router, prefix="/api", tags=["admin"])
 
 
 # Serve frontend

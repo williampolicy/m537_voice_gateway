@@ -3,8 +3,7 @@ services:
     build: .
     container_name: m537_voice_gateway
     restart: unless-stopped
-    ports:
-      - "5538:5537"
+    network_mode: host
     environment:
       - PORT=5537
       - HOST=0.0.0.0
