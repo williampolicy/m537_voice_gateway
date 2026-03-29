@@ -124,6 +124,31 @@ env:
     value: "INFO"
   - name: DEBUG
     value: "false"
+  - name: ENVIRONMENT
+    value: "production"
+
+# OpenTelemetry configuration
+otel:
+  enabled: false
+  endpoint: "http://otel-collector:4317"
+  serviceName: "m537-voice-gateway"
+
+# Sentry error tracking
+sentry:
+  enabled: false
+  dsn: ""
+  environment: "production"
+
+# API Key configuration
+apiKeys:
+  # Mount from existing secret
+  existingSecret: ""
+  # Or create new secret with these keys
+  keys: []
+  # Example:
+  # - name: "default"
+  #   key: "your-api-key-here"
+  #   tier: "standard"
 
 # Environment variables from secrets/configmaps
 envFrom: []
